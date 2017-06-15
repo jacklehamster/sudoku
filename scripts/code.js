@@ -77,13 +77,29 @@ function colorizeGrid(grid, setClass, blankClass) {
     }
 }
 
+
+var cells = null;
+var valueCache = null;
 function showGrid(grid) {
+    if(!cells) {
+        cells = [];
+        valueCache = [];
+        for(var y=1;y<=9;y++) {
+            cells[y] = [];
+            valueCache[y] = [];
+            for(var x=1;x<=9;x++) {
+                cells[y][x] = document.getElementById('id_'+x+'_'+y);
+                valueCache[y][x] = '';
+            }
+        }
+    }
     for(var y=1;y<=9;y++) {
         for(var x=1;x<=9;x++) {
             var value = grid[y][x];
-            var cell = document.getElementById('id_'+x+'_'+y);
             value = isNaN(value)?'':value;
-            if(cell.textContent !== value) {
+            if(valueCache[y][x] !== value) {
+                valueCache[y][x] = value;
+                var cell = cells[y][x];
                 cell.textContent = value;
             }
         }
