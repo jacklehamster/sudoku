@@ -1,7 +1,7 @@
 require([
-    'sudokusolver',
+    'scripts/sudokusolver'
 ], function(SudokuSolver) {
 
     var sudoku = new SudokuSolver();
-    sudoku.start(container);
+    showSudokuGrid(sudoku);
 });

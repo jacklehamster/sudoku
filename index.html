@@ -10,13 +10,16 @@
     <meta name="viewport" content="user-scalable=no,width=device-width, initial-scale=1.0,minimum-scale=1.0"/>
     <meta name="theme-color" content="#d5f97a" />
     <link rel="stylesheet" type="text/css" href="style.css">
+    <script src="node_modules/react/dist/react.min.js"></script>
+    <script src="node_modules/react-dom/dist/react-dom.min.js"></script>
+    <script src="node_modules/babel-standalone/babel.min.js"></script>
 </head>
 
 <body>
     <div class="main" align="center">
-        <h2>Sudoku Solver</h2>
-        <div id="container" class="container"></div>
+        <div id="root"></div>
     </div>
     <script data-main="app" src="lib/requirejs/require.js"></script>
+    <script type="text/babel" src="scripts/sudoku.jsx"></script>
 </body>
 
