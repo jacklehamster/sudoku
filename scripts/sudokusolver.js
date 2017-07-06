@@ -1,51 +1,9 @@
 define(function() {
-    var seed = location.search;
-
-
-    function createTable(parent, inner, xpos, ypos) {
-        var table = parent.appendChild(document.createElement('table'));
-        table.cellPadding = table.cellSpacing = 0;
-        var tbody = table.appendChild(document.createElement('tbody'));
-        for (var y = 0; y < 3; y++) {
-            var tr = tbody.appendChild(document.createElement('tr'));
-            for (var x = 0; x < 3; x++) {
-                var td = tr.appendChild(document.createElement('td'));
-                if (!inner) {
-                    createTable(td, true, x, y);
-                } else {
-                    td.id = 'id_' + (xpos * 3 + x + 1) + "_" + (ypos * 3 + y + 1);
-                    td.setAttribute('x', (xpos * 3 + x + 1));
-                    td.setAttribute('y', (ypos * 3 + y + 1));
-                    td.classList.add('cell');
-                    td.addEventListener("click", clickCell);
-                }
-            }
-        }
-        if(!inner) {
-            updateGrid();
-        }
-        return table;
-    }
-
-    function clickCell(e) {
-        var cell = e.currentTarget;
-        var x = cell.getAttribute('x');
-        var y = cell.getAttribute('y');
-
-        var digit = parseInt(grid[y][x]);
-        if (isValid(digit)) {
-            digit++;
-            if (digit > 9) {
-                digit = 0;
-            }
-        } else {
-            digit = 1;
-        }
-
+    function setGrid(x,y,digit) {
         grid[y][x] = digit ? digit : null;
-        updateGrid();
-        cancelLastSolution = true;
-        //solve();
+        showGrid(grid);
+        skipLast = true;
+        solveGrid();
     }
 
     function isValid(digit) {
@@ -72,44 +30,13 @@ define(function() {
         return result;
     }
 
-    function colorizeGrid(grid, setClass, blankClass) {
-        for (var y = 1; y <= 9; y++) {
-            for (var x = 1; x <= 9; x++) {
-                var value = grid[y][x];
-                var cell = document.getElementById('id_' + x + '_' + y);
-                cell.classList.add(isValid(value) ? setClass : blankClass);
-                cell.classList.remove(isValid(value) ? blankClass : setClass);
-            }
-        }
-    }
-
 
     var cells = null;
     var valueCache = null;
 
-    function showGrid(grid) {
-        if (!cells) {
-            cells = [];
-            valueCache = [];
-            for (var y = 1; y <= 9; y++) {
-                cells[y] = [];
-                valueCache[y] = [];
-                for (var x = 1; x <= 9; x++) {
-                    cells[y][x] = document.getElementById('id_' + x + '_' + y);
-                    valueCache[y][x] = '';
-                }
-            }
-        }
-        for (var y = 1; y <= 9; y++) {
-            for (var x = 1; x <= 9; x++) {
-                var value = grid[y][x];
-                value = isNaN(value) ? '' : value;
-                if (valueCache[y][x] !== value) {
-                    valueCache[y][x] = value;
-                    var cell = cells[y][x];
-                    cell.textContent = value;
-                }
-            }
+    function showGrid(numberGrid) {
+        for(var i=0;i<updatesCallbacks.length;i++) {
+            updatesCallbacks[i](numberGrid,grid);
         }
     }
 
@@ -159,20 +86,19 @@ define(function() {
         '...|...|...',
         '...|...|...',
     ]);
-    //*/
 
     var worker = new Worker('scripts/solveworker.js');
     worker.addEventListener('message', handleMessageFromWorker);
 
     function handleMessageFromWorker(msg) {
-        if (msg.data.grid && !cancelLastSolution) {
+        if (msg.data.grid && !skipLast) {
             showGrid(msg.data.grid);
         }
-        cancelLastSolution = false;
+        skipLast = false;
         working = false;
     }
 
-    var working = false, cancelLastSolution = false;
+    var working = false, skipLast = false;
     var message = {
         grid: null,
     };
@@ -186,24 +112,36 @@ define(function() {
 
     }
 
-    function updateGrid() {
-        colorizeGrid(grid, 'fixed-cell', 'blank-cell');
-        showGrid(grid);
-    }
-
+    var started = false;
     function startSolver() {
+        if(!started) {
+            return;
+        }
         solveGrid();
         requestAnimationFrame(startSolver);
     }
-    startSolver();
 
-    function start(container) {
-        createTable(container);
+    function start() {
+        started = true;
         startSolver();
+    }
+
+    function stop() {
+        started = false;
+    }
+
+    const updatesCallbacks = [];
+    function addUpdateCallback(callback) {
+        updatesCallbacks.push(callback);
     }
 
     function SudokuSolver() {
     }
     SudokuSolver.prototype.start = start;
+    SudokuSolver.prototype.stop = stop;
+    SudokuSolver.prototype.setGrid = setGrid;
+    SudokuSolver.prototype.addUpdateCallback = addUpdateCallback;
+    SudokuSolver.prototype.grid = grid;
+
     return SudokuSolver;
 });
