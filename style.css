@@ -15,8 +15,8 @@ table {
     border: 1px solid black;
 }
 .container {
-    width: 400px;
-    height: 400px;
+    width: 450px;
+    height: 450px;
     border: 3px solid black;
 }
 .fixed-cell {
