@@ -15,8 +15,8 @@ table {
     border: 1px solid black;
 }
 .container {
-    max-width: 400px;
-    max-height: 400px;
+    max-width: 420px;
+    max-height: 420px;
     height: 100vw;
     border: 3px solid black;
 }
