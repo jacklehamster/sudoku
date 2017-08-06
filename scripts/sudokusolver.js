@@ -2,8 +2,7 @@ define(function() {
     function setGrid(x,y,digit) {
         grid[y][x] = digit ? digit : null;
         showGrid(grid);
-        skipLast = true;
-        solveGrid();
+        solveGrid(Date.now());
     }
 
     function isValid(digit) {
@@ -87,29 +86,46 @@ define(function() {
         '...|...|...',
     ]);
 
-    var worker = new Worker('scripts/solveworker.js');
-    worker.addEventListener('message', handleMessageFromWorker);
-
     function handleMessageFromWorker(msg) {
-        if (msg.data.grid && !skipLast) {
+        if (msg.data.grid && msg.data.updated===lastUpdate) {
             showGrid(msg.data.grid);
         }
-        skipLast = false;
         working = false;
     }
 
-    var working = false, skipLast = false;
+    function createWorker() {
+        var worker = new Worker('scripts/solveworker.js');
+        worker.addEventListener('message', handleMessageFromWorker);
+        return worker;
+    }
+
     var message = {
         grid: null,
+        updated: 0,
     };
 
-    function solveGrid() {
-        if (!working) {
-            working = true;
-            message.grid = grid;
-            worker.postMessage(message);
+    var lastUpdate = 0;
+    var worker = createWorker();
+    var working = false;
+
+    function solveGrid(updated) {
+        if(working && !updated) {
+            return;
         }
 
+        if(updated && lastUpdate !== updated) {
+            lastUpdate = updated;
+        }
+        working = true;
+        message.updated = updated || lastUpdate;
+        message.grid = grid;
+        worker.postMessage(message);
+    }
+    message.grid = grid;
+    worker.postMessage(message);
+
+    function send() {
+        solveGrid(Date.now());
     }
 
     var started = false;
@@ -142,6 +158,7 @@ define(function() {
     SudokuSolver.prototype.setGrid = setGrid;
     SudokuSolver.prototype.addUpdateCallback = addUpdateCallback;
     SudokuSolver.prototype.grid = grid;
+    SudokuSolver.prototype.send = send;
 
     return SudokuSolver;
 });

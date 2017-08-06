@@ -42,6 +42,7 @@ table {
     font-weight: bold;
 }
 .cell {
+    transition: background-color .5s, color .5s;
     cursor: pointer;
     -webkit-user-select: none;
     -moz-user-select: none;
