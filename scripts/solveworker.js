@@ -1,4 +1,4 @@
-self.importScripts('sudokuc_solver.js');
+self.importScripts('sudokucsolver.js');
 
 var msgBack = {
     grid:null,
