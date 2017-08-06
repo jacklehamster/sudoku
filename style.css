@@ -15,8 +15,9 @@ table {
     border: 1px solid black;
 }
 .container {
-    width: 450px;
-    height: 450px;
+    max-width: 420px;
+    max-height: 420px;
+    height: 100vw;
     border: 3px solid black;
 }
 .fixed-cell {
@@ -41,6 +42,7 @@ table {
     font-weight: bold;
 }
 .cell {
+    transition: background-color .5s, color .5s;
     cursor: pointer;
     -webkit-user-select: none;
     -moz-user-select: none;
