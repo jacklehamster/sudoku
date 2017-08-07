@@ -33,12 +33,16 @@ class SudokuCell extends React.Component {
         return 1 <= digit && digit <= 9;
     }
 
+    shouldComponentUpdate(nextProps, nextState) {
+        return this.props.fixedValue !== nextProps.fixedValue || !this.props.fixedValue && this.props.value !== nextProps.value;
+    }
+
     render() {
         const className = this.constructor.isValid(this.props.fixedValue) ? 'cell fixed-cell' : 'cell blank-cell';
         return React.createElement(
             'td',
             { className: className, onMouseDown: this.onPress },
-            this.props.value || ''
+            this.props.fixedValue || this.props.value || ''
         );
     }
 }
@@ -54,7 +58,15 @@ class SudokuGrid extends React.Component {
     }
 
     onUpdate(grid, fixedGrid) {
+        if (this.updating) {
+            return;
+        }
+        this.updating = true;
         this.setState({ grid: grid, fixedGrid: fixedGrid });
+    }
+
+    componentDidUpdate() {
+        this.updating = false;
     }
 
     componentDidMount() {
