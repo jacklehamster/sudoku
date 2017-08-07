@@ -2,7 +2,6 @@ self.importScripts('sudokuc.js');
 
 const resultGrid = [];
 let gridPtr = null;
-let lastUpdate = 0;
 const workingSeeds = [];
 let workingSeedsHash = {};
 

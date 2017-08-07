@@ -1,8 +1,6 @@
 define(function() {
     function setGrid(x,y,digit) {
         grid[y][x] = digit ? digit : null;
-        showGrid(grid);
-        solveGrid(Date.now());
     }
 
     function isValid(digit) {
@@ -87,7 +85,7 @@ define(function() {
     ]);
 
     function handleMessageFromWorker(msg) {
-        if (msg.data.grid && msg.data.updated===lastUpdate) {
+        if (msg.data.grid) {
             showGrid(msg.data.grid);
         }
         working = false;
