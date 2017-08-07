@@ -9,11 +9,10 @@
     SUDOKU Solver
 
     Compile using emcc:
-    emcc -o sudokuc.js sudokuc.c -s WASM=1 -s EXPORTED_FUNCTIONS="['_solveSudoku','_main']"
+        emcc -o sudokuc.js sudokuc.c -s WASM=1 -s EXPORTED_FUNCTIONS="['_solveSudoku','_main']" -Os -s NO_FILESYSTEM=1
 */
 
 
-const int SIZE = (100000 + 1)*4;
 const int FULL_F = -1;  // = 0xfff.... no matter the type
 int countCodeHashPossibilities_cache[512];
 bool didChange;
@@ -21,11 +20,12 @@ typedef enum { COL=1, ROW=2, BOX=3} Type;
 typedef bool Possibilities[9][9][10] ;
 typedef struct { int x,y,digit; } Choice;
 
-bool solveSudokuHelper(int grid[], int recurse);
+bool solveSudokuHelper(int grid[], int recurse, Possibilities possibilities);
 
 int main(int argc, char ** argv) {
   printf("Greetings my friend, I'm a Sudoku solver!\n\n");
-  printf("I was written in C and compiled to Web Assembly to run on the web.\n");
+  printf("%s %s\n", __DATE__, __TIME__);
+  printf("I am written in C and compiled to Web Assembly to run on the web.\n");
   printf("To pass a grid to solve, call solveSudoku(int grid[], int seed).\n");
   printf("- grid[] is an array of integer, representing each cell. Each index respresent x + y*9\n");
   printf("- seed is an integer to randomize the solution if there are many.\n");
@@ -359,93 +359,6 @@ bool checkGroupOccupancy(Possibilities possibilities) {
         && checkGroupOccupancyForType(BOX, possibilities);
 }
 
-void showPossibilities(Possibilities possibilities) {
-    for(int y=0; y<9; y++) {
-        for(int x=0; x<9; x++) {
-            printf("%i,%i:", x, y);
-            for(int digit=1; digit<=9;digit++) {
-                if(possibilities[x][y][digit]) {
-                    printf(" %i", digit);
-                }
-            }
-            printf("\n");
-        }
-    }
-}
-
-void insertInCodes(int digit, int codeLine[10]) {
-    codeLine[digit] = 1;
-}
-
-void displayCode(int codeLine[10]) {
-    for(int digit=1; digit<=9; digit++) {
-        if(codeLine[digit]) {
-            printf(" %i", digit);
-        }
-    }
-}
-
-void displayBitCode(int bitCode) {
-    int pos = bitCode / (1<<12);
-    int type = (bitCode >> 10) & 3;
-    switch(type) {
-        case ROW: printf("ROW"); break;
-        case COL: printf("COL"); break;
-        case BOX: printf("BOX"); break;
-        default: break;
-    }
-    printf("%i-", pos);
-    for(int i=0;i<9;i++) {
-        if(bitCode & (1<<i)) {
-            printf("%i",i);
-        }
-    }
-    printf(": ");
-}
-
-void insertOccupancyCodes(
-    Type type,
-    Possibilities possibilities,
-    int codes[][10],
-    int* p_count,
-    int codeHash[],
-    int codeHashList[]
-) {
-    for(int pos=0; pos<9; pos++) {
-        for(int digit=1; digit<=9;digit++) {
-            int bitCode = occupancyBitCode(digit, type, pos, possibilities);
-            if(codeHash[bitCode] < 1) {
-                codeHash[bitCode] = *p_count;
-                codeHashList[codeHash[bitCode]] = bitCode;
-                (*p_count)++;
-            }
-            insertInCodes(digit, codes[codeHash[bitCode]]);
-        }
-    }
-}
-
-void showBitCodes(Possibilities possibilities) {
-    int codes[3*9*9][10];
-    int count = 0;
-    int codeHash[40960];
-    int codeHashList[3*9*9];
-    memset(codeHash, FULL_F, sizeof(codeHash));
-    memset(codes,0,sizeof(codes));
-
-    insertOccupancyCodes(ROW, possibilities, codes, &count, codeHash, codeHashList);
-    insertOccupancyCodes(COL, possibilities, codes, &count, codeHash, codeHashList);
-    insertOccupancyCodes(BOX, possibilities, codes, &count, codeHash, codeHashList);
-
-    for(int i=0; i<count; i++) {
-        int bitCode = codeHashList[i];
-        if(codeHash[bitCode] >= 0) {
-            displayBitCode(bitCode);
-            displayCode(codes[codeHash[bitCode]]);
-            printf("\n");
-        }
-    }
-}
-
 int getPossibleDigits(int x,int y,int result[9], Possibilities possibilities) {
     int count = 0;
     for(int digit=1; digit<=9; digit++) {
@@ -454,19 +367,6 @@ int getPossibleDigits(int x,int y,int result[9], Possibilities possibilities) {
         }
     }
     return count;
-}
-
-void shuffleChoices(Choice choices[], int count) {
-    Choice temp;
-//    for(int i=0; i<count; i++) {
-    int i = rand()%count;
-        int j = rand()%count;
-        if(j != i) {
-            memcpy(&temp, choices+i, sizeof(Choice));
-            memcpy(choices+i, choices+j, sizeof(Choice));
-            memcpy(choices+j, &temp, sizeof(Choice));
-        }
-//    }
 }
 
 int getAllPossibleChoices(Possibilities possibilities, Choice choices[]) {
@@ -521,23 +421,27 @@ bool solveHelper(Possibilities possibilities) {
     return true;
 }
 
-
-
-bool tryChoices(Choice choices[], int count, int grid[], int recurse) {
+bool tryChoices(Choice choices[], int count, int grid[], int recurse, Possibilities possibilities) {
     int subgrid[9*9];
     memcpy(subgrid, grid, sizeof(subgrid));
+    Possibilities newPossibilities;
 
+    int tries = 3;
     while(count > 0) {
         int i = rand()%count;
         subgrid[choices[i].x + choices[i].y*9] = choices[i].digit;
-        if(solveSudokuHelper(subgrid, recurse+1)) {
+        memcpy(&newPossibilities, possibilities, sizeof(Possibilities));
+        if(solveSudokuHelper(subgrid, recurse+1, newPossibilities)) {
             memcpy(grid, subgrid, sizeof(subgrid));
             return true;
         }
         subgrid[choices[i].x + choices[i].y*9] = 0;
         choices[i] = choices[count-1];
         count--;
-        break;
+        tries--;
+        if(tries<=0) {
+            break;
+        }
     }
     return false;
 }
@@ -554,13 +458,11 @@ void makeSolutionGrid(Possibilities possibilities, int grid[]) {
 
 int maxDepth;
 
-bool solveSudokuHelper(int grid[], int recurse) {
+bool solveSudokuHelper(int grid[], int recurse, Possibilities possibilities) {
     if(recurse > maxDepth) {
         maxDepth = recurse;
     }
 
-    Possibilities possibilities;
-    memset(possibilities, FULL_F, sizeof(possibilities));
     applyGrid(grid, possibilities);
 
     bool possible = solveHelper(possibilities);
@@ -571,7 +473,7 @@ bool solveSudokuHelper(int grid[], int recurse) {
     Choice choices[9*9*9];
     int choiceCount = getAllPossibleChoices(possibilities, choices);
     if(choiceCount) {
-        return tryChoices(choices, choiceCount, grid, recurse);
+        return tryChoices(choices, choiceCount, grid, recurse, possibilities);
     } else {
         makeSolutionGrid(possibilities, grid);
     }
@@ -582,5 +484,7 @@ bool solveSudokuHelper(int grid[], int recurse) {
 bool solveSudoku(int grid[], int seed) {
     srand(seed);
     maxDepth = 0;
-    return solveSudokuHelper(grid,0);
+    Possibilities possibilities;
+    memset(possibilities, FULL_F, sizeof(possibilities));
+    return solveSudokuHelper(grid,0, possibilities);
 }
