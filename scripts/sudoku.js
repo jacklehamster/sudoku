@@ -2,12 +2,72 @@ class SudokuCell extends React.Component {
     constructor(props) {
         super(props);
         this.onPress = this.onPress.bind(this);
+        this.startScroller = this.startScroller.bind(this);
+        this.state = {
+            scroll: 0
+        };
+        this.isTouch = false;
+    }
+
+    startScroller(x, y, digit, isTouch) {
+        const scrollCellHeight = 62;
+        let orgY = -digit * scrollCellHeight;
+        this.setState({
+            scroll: orgY,
+            touching: true
+        });
+
+        function scroller(e) {
+            const pageX = e.touches ? e.touches[0].pageX : e.pageX;
+            const pageY = e.touches ? e.touches[0].pageY : e.pageY;
+            let scroll = orgY - y + pageY - x + pageX;
+            if (scroll > 0) {
+                orgY -= scroll;
+                scroll = 0;
+            } else if (scroll < -9 * scrollCellHeight) {
+                scroll = -9 * scrollCellHeight;
+            }
+            this.setState({
+                scroll
+            }, function () {
+                const scrollDigit = Math.round(Math.min(9, Math.max(0, -this.state.scroll / scrollCellHeight)));
+                const digit = parseInt(this.props.fixedValue);
+                if (digit !== scrollDigit) {
+                    this.props.sudoku.setGrid(this.props.x, this.props.y, scrollDigit);
+                    this.props.sudoku.send();
+                }
+            });
+        }
+
+        function mouseUp(e) {
+            this.setState({
+                touching: false
+            });
+            document.removeEventListener('mouseup', mouseUp);
+            document.removeEventListener('mousemove', scroller);
+            document.removeEventListener('touchend', mouseUp);
+            document.removeEventListener('touchmove', scroller);
+        }
+
+        mouseUp = mouseUp.bind(this);
+        scroller = scroller.bind(this);
+
+        if (isTouch) {
+            document.addEventListener('touchmove', scroller);
+            document.addEventListener('touchend', mouseUp);
+        } else {
+            document.addEventListener('mousemove', scroller);
+            document.addEventListener('mouseup', mouseUp);
+        }
     }
 
     onPress(e) {
-        const cell = e.currentTarget;
-        const x = this.props.x;
-        const y = this.props.y;
+        if (e.type === 'touchstart' && !this.isTouch) {
+            this.isTouch = true;
+        } else if (e.type === 'mousedown' && this.isTouch) {
+            this.isTouch = false;
+            return;
+        }
 
         let digit = parseInt(this.props.fixedValue);
         if (this.constructor.isValid(digit)) {
@@ -18,8 +78,15 @@ class SudokuCell extends React.Component {
         } else {
             digit = 1;
         }
-        this.props.sudoku.setGrid(x, y, digit);
+
+        const pageX = e.touches ? e.touches[0].pageX : e.pageX;
+        const pageY = e.touches ? e.touches[0].pageY : e.pageY;
+
+        this.startScroller(pageX, pageY, digit, e.type === 'touchstart');
+
+        this.props.sudoku.setGrid(this.props.x, this.props.y, digit);
         this.props.sudoku.send();
+        e.stopPropagation();
     }
 
     static isValid(digit) {
@@ -34,15 +101,111 @@ class SudokuCell extends React.Component {
     }
 
     shouldComponentUpdate(nextProps, nextState) {
-        return this.props.fixedValue !== nextProps.fixedValue || !this.props.fixedValue && this.props.value !== nextProps.value;
+        return this.props.fixedValue !== nextProps.fixedValue || !this.props.fixedValue && this.props.value !== nextProps.value || this.state.scroll !== nextState.scroll || this.state.touching !== nextState.touching;
     }
 
     render() {
         const className = this.constructor.isValid(this.props.fixedValue) ? 'cell fixed-cell' : 'cell blank-cell';
         return React.createElement(
             'td',
-            { className: className, onMouseDown: this.onPress },
-            this.props.fixedValue || this.props.value || ''
+            { className: className,
+                onTouchStart: this.onPress,
+                onMouseDown: this.onPress },
+            React.createElement(
+                'div',
+                { style: {
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    } },
+                this.props.fixedValue || this.props.value || ''
+            ),
+            React.createElement(
+                'div',
+                { className: 'tip ' + (this.state.touching ? 'active' : ''), style: {
+                        marginTop: -90,
+                        marginLeft: -8,
+                        position: 'absolute',
+                        width: 52,
+                        height: 92
+                    } },
+                React.createElement(
+                    'svg',
+                    { style: {
+                            position: 'relative',
+                            bottom: -45
+                        }, height: 45, width: 58 },
+                    React.createElement('polygon', { points: '0,0 58,0 51,45 8,45', style: { fillOpacity: 0.2, fill: '#000' } })
+                ),
+                React.createElement(
+                    'div',
+                    { style: {
+                            position: 'relative',
+                            top: -62,
+                            border: '2px black solid',
+                            backgroundColor: 'lavender',
+                            color: 'darkblue',
+                            height: 54,
+                            width: 54,
+                            opacity: .95,
+                            overflow: 'hidden'
+                        } },
+                    React.createElement(
+                        'div',
+                        { style: {
+                                position: 'relative',
+                                top: this.state.scroll
+                            } },
+                        React.createElement('div', { className: 'scroller' }),
+                        React.createElement(
+                            'div',
+                            { className: 'scroller' },
+                            '1'
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'scroller' },
+                            '2'
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'scroller' },
+                            '3'
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'scroller' },
+                            '4'
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'scroller' },
+                            '5'
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'scroller' },
+                            '6'
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'scroller' },
+                            '7'
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'scroller' },
+                            '8'
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'scroller' },
+                            '9'
+                        )
+                    )
+                )
+            )
         );
     }
 }
@@ -109,7 +272,7 @@ class SudokuGrid extends React.Component {
                     { key: x + y * 3 },
                     React.createElement(
                         'table',
-                        { cellSpacing: 0, cellPadding: 0 },
+                        { className: 'subtable', cellSpacing: 0, cellPadding: 0 },
                         React.createElement(
                             'tbody',
                             null,
