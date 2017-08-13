@@ -1,6 +1,7 @@
 tr {
     height: 33%;
     border: 1px solid silver;
+    user-select: none;
 }
 td {
     width: 33%;
@@ -49,10 +50,36 @@ table {
     -ms-user-select: none;
     user-select: none;
 }
-.cell:hover {
-    border: 2px solid yellow;
-    padding: -2px;
-}
 .main {
     width: 100%;
+    user-select: none;
+}
+@media screen and (max-width: 420px) {
+    .container {
+        border: 0;
+    }
+    body {
+        margin: 0;
+    }
+    tr {
+        border: 0;
+    }
+    table {
+        border: 0;
+    }
+    .subtable {
+        border: 1px solid black;
+    }
+}
+.tip {
+    display: none;
+}
+.tip.active {
+    display: inherit;
+}
+.scroller {
+    height: 40px;
+    padding: 10px;
+    border-top: 1px solid #ebebff;
+    border-bottom: 1px solid #d1d1e5;
 }
