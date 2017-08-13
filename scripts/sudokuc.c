@@ -9,7 +9,7 @@
     SUDOKU Solver
 
     Compile using emcc:
-        emcc -o sudokuc.js sudokuc.c -s WASM=1 -s EXPORTED_FUNCTIONS="['_solveSudoku','_main']" -Os -s NO_FILESYSTEM=1
+        emcc -o sudokuc.js sudokuc.c -s WASM=1 -s EXPORTED_FUNCTIONS="['_solveSudoku','_main']" -Os -s NO_FILESYSTEM=1 -s "BINARYEN_METHOD='native-wasm,asmjs'"
 */
 
 
