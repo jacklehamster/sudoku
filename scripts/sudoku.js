@@ -1,3 +1,5 @@
+const demoMode = window.innerWidth <= 100 || window.innerHeight <= 100;
+
 class SudokuCell extends React.Component {
     constructor(props) {
         super(props);
@@ -20,7 +22,7 @@ class SudokuCell extends React.Component {
         function scroller(e) {
             const pageX = e.touches ? e.touches[0].pageX : e.pageX;
             const pageY = e.touches ? e.touches[0].pageY : e.pageY;
-            let scroll = orgY - y + pageY - x + pageX;
+            let scroll = orgY + (-y + pageY - x + pageX) * 2;
             if (scroll > 0) {
                 orgY -= scroll;
                 scroll = 0;
@@ -37,6 +39,8 @@ class SudokuCell extends React.Component {
                     this.props.sudoku.send();
                 }
             });
+            e.preventDefault();
+            e.stopPropagation();
         }
 
         function mouseUp(e) {
@@ -62,6 +66,9 @@ class SudokuCell extends React.Component {
     }
 
     onPress(e) {
+        if (demoMode) {
+            return;
+        }
         if (e.type === 'touchstart' && !this.isTouch) {
             this.isTouch = true;
         } else if (e.type === 'mousedown' && this.isTouch) {
@@ -105,7 +112,10 @@ class SudokuCell extends React.Component {
     }
 
     render() {
-        const className = this.constructor.isValid(this.props.fixedValue) ? 'cell fixed-cell' : 'cell blank-cell';
+        let className = this.constructor.isValid(this.props.fixedValue) ? 'cell fixed-cell' : 'cell blank-cell';
+        if (this.props.darker) {
+            className += ' darker';
+        }
         return React.createElement(
             'td',
             { className: className,
@@ -218,6 +228,25 @@ class SudokuGrid extends React.Component {
             fixedGrid: this.props.sudoku.grid
         };
         this.props.sudoku.addUpdateCallback(this.onUpdate.bind(this));
+        if (demoMode) {
+            this.time = performance.now();
+            this.solving = true;
+            this.cellList = [];
+            for (let i = 0; i < 81; i++) {
+                this.cellList[i] = [i % 9 + 1, Math.floor(i / 9) + 1];
+            }
+            this.shuffleCellList();
+            this.cellIndex = 0;
+        }
+    }
+
+    shuffleCellList() {
+        for (let i = 0; i < this.cellList.length; i++) {
+            const temp = this.cellList[i];
+            const index = Math.floor(Math.random() * this.cellList.length);
+            this.cellList[i] = this.cellList[index];
+            this.cellList[index] = temp;
+        }
     }
 
     onUpdate(grid, fixedGrid) {
@@ -230,6 +259,36 @@ class SudokuGrid extends React.Component {
 
     componentDidUpdate() {
         this.updating = false;
+
+        if (demoMode) {
+            this.demo();
+        }
+    }
+
+    demo() {
+        if (performance.now() - this.time > 100) {
+            if (this.solving) {
+                const pos = this.cellList[this.cellIndex];
+                const x = pos[0];
+                const y = pos[1];
+                this.props.sudoku.setGrid(x, y, this.state.grid[y][x]);
+                this.cellIndex++;
+                if (this.cellIndex >= this.cellList.length) {
+                    this.solving = false;
+                }
+            } else {
+                this.cellIndex--;
+                const pos = this.cellList[this.cellIndex];
+                const x = pos[0];
+                const y = pos[1];
+                this.props.sudoku.setGrid(x, y, 0);
+                if (this.cellIndex === 0) {
+                    this.solving = true;
+                    this.shuffleCellList();
+                }
+            }
+            this.time = performance.now();
+        }
     }
 
     componentDidMount() {
@@ -241,6 +300,7 @@ class SudokuGrid extends React.Component {
     }
 
     subGrid(xpos, ypos) {
+        const odd = (xpos + ypos) % 2 === 1;
         const array = [];
         for (let y = 0; y < 3; y++) {
             const line = [];
@@ -250,7 +310,8 @@ class SudokuGrid extends React.Component {
                 const id = `id_${x_attr}_${y_attr}`;
                 const value = this.state.grid[y_attr][x_attr];
                 const fixedValue = this.state.fixedGrid[y_attr][x_attr];
-                line.push(React.createElement(SudokuCell, { key: x + y * 3, sudoku: this.props.sudoku, value: value,
+                line.push(React.createElement(SudokuCell, { darker: odd && demoMode,
+                    key: x + y * 3, sudoku: this.props.sudoku, value: value,
                     x: x_attr, y: y_attr, fixedValue: fixedValue }));
             }
             array.push(React.createElement(
@@ -294,11 +355,15 @@ class SudokuGrid extends React.Component {
         return React.createElement(
             'div',
             null,
-            this.props.title ? React.createElement(
-                'h2',
-                null,
-                this.props.title
-            ) : null,
+            React.createElement(
+                'div',
+                { className: 'title' },
+                this.props.title ? React.createElement(
+                    'h2',
+                    null,
+                    this.props.title
+                ) : null
+            ),
             React.createElement(
                 'div',
                 { className: 'container' },
