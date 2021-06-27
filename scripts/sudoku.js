@@ -1,4 +1,4 @@
-const demoMode = window.innerWidth <= 100 || window.innerHeight <= 100;
+const demoMode = window.innerWidth <= 100 || window.innerHeight <= 100 || location.search.indexOf("demo") >= 0;
 
 class SudokuCell extends React.Component {
     constructor(props) {
